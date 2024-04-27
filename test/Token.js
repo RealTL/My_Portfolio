@@ -9,11 +9,13 @@ const tokens = (supply) => {
 
 describe("Token", ()=> {
     // Tests go inside here...
-    let token;
+    let token, accounts, deployer;
 
     beforeEach( async () => {
         const Token = await ethers.getContractFactory('Token');
         token = await Token.deploy('Dapp University', 'DAPP', '1000000');
+        accounts = await ethers.getSigners();
+        deployer = accounts[0];
     })
 
     describe("Deployment", () => {
@@ -48,6 +50,15 @@ describe("Token", ()=> {
         it("Checking totalSupply", async () => {
             expect(await token.totalSupply()).to.equal(tokens(totalSupply));
         })
+
+        it("Checking balanceOf contract owner", async () => {
+            let bal = await token.balanceOf(deployer.address);
+            console.log(ethers.utils.formatUnits(bal.toString(), 'ether'));
+            expect(await token.balanceOf(deployer.address)).to.equal(tokens(totalSupply));
+        })
+
+
+
     })
 
 
