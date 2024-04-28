@@ -9,7 +9,7 @@ const tokens = (supply) => {
 
 describe("Token", () => {
     // Tests go inside here...
-    let token, accounts, deployer, receiver;
+    let token, accounts, deployer, receiver, delegate;
 
     beforeEach( async () => {
         const Token = await ethers.getContractFactory('Token');
@@ -17,6 +17,7 @@ describe("Token", () => {
         accounts = await ethers.getSigners();
         deployer = accounts[0];
         receiver = accounts[1];
+        delegate = accounts[2];
     })
 
     describe("Deployment", () => {
@@ -60,7 +61,7 @@ describe("Token", () => {
 
 
 
-    })
+    });
 
     describe("Transfer tokens", () => {
         let amountToTransfer = tokens(100), transaction, result;
@@ -113,7 +114,36 @@ describe("Token", () => {
                 await expect(token.connect(deployer).transfer(invalidAddress, amountToTransfer)).to.be.reverted;
             });
         });
+    });
 
-    })
+    describe("Transfer token approvals", () => {
+        let amountToTransfer = tokens(100), transaction, result;
+
+        beforeEach( async () => {
+            transaction = await token.connect(deployer).approve(delegate.address, amountToTransfer);
+            result = await transaction.wait();
+        });
+
+        describe('Success', () => {
+            it("Checking delegate token allowance", async () => {
+                expect(await token.allowance(deployer.address, delegate.address)).to.equal(amountToTransfer);
+            });
+
+            it("Checking for approval event", async () => {
+                const eventLog = await result.events[0];
+                expect(eventLog.event).to.equal('Approval');
+                //console.log(eventLog);
+                const eventArgs = eventLog.args;
+                expect(eventArgs._owner).to.equal(deployer.address);
+                expect(eventArgs._spender).to.equal(delegate.address);
+                expect(eventArgs._value).to.equal(amountToTransfer);
+            });
+        });
+        describe('Failure', () => {
+            it("Checking rejection of invalid delegate", async () => {
+                await expect(token.connect(deployer).approve('0x0000000000000000000000000000000000000000', amountToTransfer)).to.be.reverted;
+            });            
+        });
+    });
 
 })
