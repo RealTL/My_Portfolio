@@ -12,8 +12,7 @@ contract Token {
     // Track Balances
     mapping(address => uint256) public balanceOf;
 
-    // Send Tokens
-
+    event Transfer(address indexed _from, address indexed _to, uint256 _value);
 
     constructor(string memory _name, string memory _symbol, uint256 _totalSupply) {
         name = _name;
@@ -22,12 +21,13 @@ contract Token {
         balanceOf[msg.sender] = totalSupply;
     }
 
-    // function balanceOf(address _owner) public view returns (uint256 balance) {
-
-    // }
-
     function transfer(address _to, uint256 _value) public returns (bool success) {
-
+        require(balanceOf[msg.sender] >= _value, "Transfer declined due to insufficient balance.");
+        require(_to != address(0), "Transfer declined due to insufficient balance.");
+        balanceOf[msg.sender] = balanceOf[msg.sender] - _value;
+        balanceOf[_to] = balanceOf[_to] + _value;
+        emit Transfer(msg.sender, _to, _value);
+        return true;
     }
 
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
