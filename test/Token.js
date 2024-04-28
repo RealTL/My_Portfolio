@@ -84,7 +84,7 @@ describe("Token", () => {
                 // let dBalancePostTransfer = await token.balanceOf(deployer.address);
                 // let rBalancePostTransfer = await token.balanceOf(receiver.address); 
                 // or you could initiate a transfer this way:
-                // await token.transfer(receiver.address, 1);
+                // await token.transfer(receiver.address, amountToTransfer);
                 // console.log('Deployer and Receiver balances after transfer: ', dBalancePostTransfer, rBalancePostTransfer);
                 
                 // expect(result.success).to.equal(true);
@@ -146,4 +146,58 @@ describe("Token", () => {
         });
     });
 
+
+    describe('Checking Delegated Token Transfers', () => {
+        let amount, transaction, result
+    
+        beforeEach(async () => {
+          amount = tokens(100)
+          transaction = await token.connect(deployer).approve(delegate.address, amount)
+          result = await transaction.wait()
+        })
+    
+        describe('Success', () => {
+            beforeEach(async () => {
+                transaction = await token.connect(delegate).transferFrom(deployer.address, receiver.address, amount)
+                result = await transaction.wait()
+            })
+            
+            console.log(result);
+            
+            it('Checking transfers token balances', async () => {
+                expect(await token.balanceOf(deployer.address)).to.be.equal(ethers.utils.parseUnits('999900', 'ether'))
+                expect(await token.balanceOf(receiver.address)).to.be.equal(amount)
+                // console.log("Balance of delegate: ", ethers.utils.formatEther((await token.balanceOf(delegate.address)).toString()));
+                // console.log("Balance of deployer: ", ethers.utils.formatEther((await token.balanceOf(deployer.address)).toString()));
+                // console.log("Balance of receiver: ", ethers.utils.formatEther((await token.balanceOf(receiver.address)).toString()));
+                // console.log("delegate address: ", delegate.address);
+                // console.log("receiver address: ", receiver.address);
+                // console.log("deployer address: ", deployer.address);
+            })
+        
+            it('Checking resets the allowance', async () => {
+                expect(await token.allowance(deployer.address, delegate.address)).to.be.equal(0)
+            })
+        
+            it('Checking that transfer event emits', async () => {
+                const event = result.events[0]
+                // console.log(event);
+                expect(event.event).to.equal('Transfer')
+        
+                const args = event.args
+                expect(args._from).to.equal(deployer.address)
+                expect(args._to).to.equal(receiver.address)
+                expect(args._value).to.equal(amount)
+            })
+        })
+
+        describe('Failure', async () => {
+            // Attempt to transfer too many tokens
+            it('Checking rejection due to insufficient allowance', async () => {
+                const invalidAmount = tokens(100000000) // 100 Million, greater than total supply
+                await expect(token.connect(delegate).transferFrom(deployer.address, receiver.address, invalidAmount)).to.be.reverted
+            })            
+        })
+
+    })
 })
